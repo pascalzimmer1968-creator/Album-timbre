@@ -1,0 +1,132 @@
+<!DOCTYPE html><html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collection de timbres PRO+</title>
+<style>
+body { font-family: Arial; margin:0; background:#eef2f7; }
+header { background:#0f172a; color:white; padding:20px; text-align:center; }
+.container { padding:20px; }
+.controls { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+input, select { padding:10px; border-radius:8px; border:1px solid #ccc; }
+button { padding:10px 15px; border:none; border-radius:8px; background:#0f172a; color:white; cursor:pointer; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:20px; }
+.card { background:white; border-radius:12px; padding:15px; box-shadow:0 3px 8px rgba(0,0,0,0.2); }
+.card img { width:100%; border-radius:8px; }
+.value { color:green; font-weight:bold; }
+.stats { background:white; padding:15px; border-radius:10px; margin-bottom:20px; }
+</style>
+</head>
+<body><header>
+<h1>Collection de timbres PRO+</h1>
+<p>Application complète de collectionneur</p>
+</header><div class="container"><div class="stats">
+<h3>Statistiques</h3>
+<p>Total collection : <span id="totalValue">0</span> €</p>
+<p>Nombre de timbres : <span id="totalCount">0</span></p>
+<p>Pépites détectées (>10€) : <span id="rareCount">0</span></p>
+</div><div class="controls">
+<input type="text" id="search" placeholder="Recherche..." onkeyup="filter()">
+<select onchange="sort(this.value)">
+<option value="">Trier</option>
+<option value="value">Valeur</option>
+<option value="year">Année</option>
+</select>
+<button onclick="exportData()">💾 Sauvegarder</button>
+<button onclick="importData()">📂 Charger</button>
+<input type="file" id="fileInput" style="display:none" onchange="loadFile(event)">
+</div><h3>Ajouter un timbre</h3>
+<div class="controls">
+<input id="name" placeholder="Nom">
+<input id="year" type="number" placeholder="Année">
+<input id="value" type="number" placeholder="Valeur €">
+<input id="desc" placeholder="Description">
+<input id="state" placeholder="État">
+<input id="image" type="file">
+<button onclick="addStamp()">Ajouter</button>
+</div><div class="grid" id="grid"></div></div><script>
+let stamps = JSON.parse(localStorage.getItem('stamps')||'[]');
+
+function save(){ localStorage.setItem('stamps', JSON.stringify(stamps)); }
+
+function render(){
+let grid=document.getElementById('grid');
+grid.innerHTML='';
+let total=0, rare=0;
+
+stamps.forEach(s=>{
+ total+=Number(s.value);
+ if(s.value>10) rare++;
+
+ let div=document.createElement('div');
+ div.className='card';
+ div.innerHTML=`
+ <img src="${s.image}">
+ <h3>${s.name}</h3>
+ Année: ${s.year}<br>
+ Valeur: <span class='value'>${s.value}€</span><br>
+ ${s.desc}<br>
+ État: ${s.state}
+ `;
+ grid.appendChild(div);
+});
+
+document.getElementById('totalValue').innerText=total;
+document.getElementById('totalCount').innerText=stamps.length;
+document.getElementById('rareCount').innerText=rare;
+}
+
+function addStamp(){
+let file=document.getElementById('image').files[0];
+let reader=new FileReader();
+reader.onload=function(){
+ stamps.push({
+ name:document.getElementById('name').value,
+ year:document.getElementById('year').value,
+ value:document.getElementById('value').value,
+ desc:document.getElementById('desc').value,
+ state:document.getElementById('state').value,
+ image:reader.result
+ });
+ save(); render();
+};
+if(file) reader.readAsDataURL(file);
+}
+
+function filter(){
+let q=document.getElementById('search').value.toLowerCase();
+document.querySelectorAll('.card').forEach(c=>{
+ c.style.display=c.innerText.toLowerCase().includes(q)?'block':'none';
+});
+}
+
+function sort(type){
+if(type==='value') stamps.sort((a,b)=>b.value-a.value);
+if(type==='year') stamps.sort((a,b)=>b.year-a.year);
+save(); render();
+}
+
+function exportData(){
+let data=JSON.stringify(stamps);
+let blob=new Blob([data], {type:'application/json'});
+let a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download='collection_timbres.json';
+a.click();
+}
+
+function importData(){ document.getElementById('fileInput').click(); }
+
+function loadFile(e){
+let file=e.target.files[0];
+let reader=new FileReader();
+reader.onload=function(){
+ stamps=JSON.parse(reader.result);
+ save(); render();
+};
+reader.readAsText(file);
+}
+
+render();
+</script></body>
+</html>
